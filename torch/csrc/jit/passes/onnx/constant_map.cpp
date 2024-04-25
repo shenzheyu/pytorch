@@ -46,6 +46,13 @@ void ConstantValueMap::SetAllGraphInputsStatic(bool all_static) {
 
 c10::optional<bool> ConstantValueMap::GetAllGraphInputsStatic() {
   return ConstantValueMap::getInstance().allGraphInputsStatic;
+
+void ConstantValueMap::SetAllGraphInputsReliableComputed(bool computed) {
+  ConstantValueMap::getInstance().allGraphInputsReliableComputed = computed;
+}
+
+bool ConstantValueMap::GetAllGraphInputsReliableComputed() {
+  return ConstantValueMap::getInstance().allGraphInputsReliableComputed;
 }
 
 void ConstantValueMap::SetShape(
@@ -277,6 +284,7 @@ void ConstantValueMap::ClearMaps() {
   ConstantValueMap::getInstance().symbolDimMap.clear();
   ConstantValueMap::getInstance().dimSymbolMap.clear();
   ConstantValueMap::getInstance().allGraphInputsStatic = c10::nullopt;
+  ConstantValueMap::getInstance().allGraphInputsReliableComputed = false;
 }
 
 // For debug only.

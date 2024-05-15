@@ -22,7 +22,11 @@ from torch._dynamo.testing import rand_strided
 from torch._dynamo.utils import counters, identity, preserve_rng_state
 
 from . import config, ir
-from .autotune_process import TensorMeta, TritonBenchmarkRequest
+from .autotune_process import (
+    GroupedTritonBenchmarkRequest,
+    TensorMeta,
+    TritonBenchmarkRequest,
+)
 from .codecache import code_hash, PersistentCache, PyCodeCache
 from .codegen.common import IndentedBuffer, KernelTemplate
 
@@ -1322,11 +1326,36 @@ class AlgorithmSelectorCache(PersistentCache):
                 torch.cuda.synchronize()  # shake out any CUDA errors
             return result
 
+        def benchmark_grouped_triton_choices(
+            choices,
+            example_inputs,
+            example_inputs_extern,
+            out,
+            out_extern,
+            expected,
+            target
+        ):
+            grouped_bmreq = GroupedTritonBenchmarkRequest(choices)
+            timings = grouped_bmreq.benchmark(
+                *example_inputs, output_tensor=out, target=target
+            )
+            return timings
+
         def benchmark_in_current_process(choices):
             inputs = get_inputs()
             example_inputs, _, out, _, _ = inputs
+
+            triton_choices = [
+                choice for choice in choices if isinstance(choice, TritonTemplateCaller)
+            ]
+            other_choices = [
+                choice
+                for choice in choices
+                if not isinstance(choice, TritonTemplateCaller)
+            ]
+
             timings = {}
-            for choice in choices:
+            for choice in other_choices:
                 try:
                     timing = benchmark_choice_in_current_process(choice, *inputs)
                 except CUDACompileError as e:
@@ -1364,6 +1393,11 @@ class AlgorithmSelectorCache(PersistentCache):
                         raise e
 
                 timings[choice] = timing
+
+            target = timings[min(timings, key=timings.get)] if timings else float("inf")
+            timings.update(
+                benchmark_grouped_triton_choices(triton_choices, *inputs, target)
+            )
 
             return timings
 

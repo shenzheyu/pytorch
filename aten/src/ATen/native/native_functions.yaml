@@ -320,6 +320,34 @@
 - func: feature_alpha_dropout_(Tensor(a!) self, float p, bool train) -> Tensor(a!)
   tags: nondeterministic_seeded
 
+- func: native_add_dropout_fuse(Tensor input1, Tensor residual1, Tensor input2, Tensor residual2, float p, bool? train) -> (Tensor, Tensor, Tensor, Tensor)
+  variants: function
+  python_module: nn
+  dispatch:
+    CUDA: native_add_dropout_fuse_cuda
+  tags: [nondeterministic_seeded, core]
+
+- func: native_add_dropout_fuse_2(Tensor grad_output1, Tensor mask1, Tensor grad_output2, Tensor mask2, float scale) -> (Tensor, Tensor, Tensor, Tensor)
+  variants: function
+  python_module: nn
+  dispatch:
+    CUDA: native_add_dropout_fuse_2_cuda
+  tags: [nondeterministic_seeded, core]
+
+- func: native_add_dropout_add_fuse(Tensor input1, Tensor bias1, Tensor residual1, Tensor input2, Tensor bias2, Tensor residual2, float p, bool? train) -> (Tensor, Tensor, Tensor, Tensor)
+  variants: function
+  python_module: nn
+  dispatch:
+    CUDA: native_add_dropout_add_fuse_cuda
+  tags: [nondeterministic_seeded, core]
+
+- func: native_add_dropout_add_fuse_2(Tensor grad_output1, Tensor mask1, Tensor grad_output2, Tensor mask2, float scale) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+  variants: function
+  python_module: nn
+  dispatch:
+    CUDA: native_add_dropout_add_fuse_2_cuda
+  tags: [nondeterministic_seeded, core]
+
 - func: abs(Tensor self) -> Tensor
   device_check: NoCheck   # TensorIterator
   variants: function, method

@@ -508,9 +508,12 @@ class TestNestedTensor(TestCase):
         nested_namespace_result = torch.nested.to_padded_tensor(nt, 4)
         self.assertEqual(result, nested_namespace_result)
 
-    def test_to(self):
+    @parametrize("layout", [torch.strided, torch.jagged], name_fn=layout_name)
+    def test_to(self, layout):
+        import torch.nested._internal.ops
+
         ntensors = 4
-        nt = random_nt(torch.device('cpu'), torch.float32, ntensors, (4, 4))
+        nt = random_nt_from_dims((7, None, 10), torch.device('cpu'), torch.float32, layout=layout)
 
         def test_copy_behavior(t, non_blocking=False):
             self.assertIs(t, t.to(t, non_blocking=non_blocking))
@@ -559,6 +562,15 @@ class TestNestedTensor(TestCase):
                     self.assertEqual(nt.device, nt2.to('cpu', dtype=torch.int32, non_blocking=non_blocking).device)
                     self.assertIs(torch.int32, nt2.to(dtype=torch.int32).dtype)
                     self.assertEqual(nt2.device, nt2.to(dtype=torch.int32).device)
+
+        # Jagged <-> strided
+        new_layout = torch.jagged if layout == torch.strided else torch.strided
+        new_layout_nt = torch.ops.aten._to_copy(nt, layout=new_layout)
+        self.assertIs(new_layout_nt.layout, new_layout)
+        self.assertEqual(new_layout_nt.device, nt.device)
+        self.assertEqual(new_layout_nt.size(2), nt.size(2))
+        self.assertEqual(new_layout_nt.unbind(), nt.unbind())
+        self.assertNotEqual(new_layout_nt.data_ptr(), nt.data_ptr())
 
     def test_copy_(self):
         ntensors = 4
